@@ -26,6 +26,40 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5020;
 
-app.listen(5020, () => {
+const server = app.listen(5020, () => {
   console.log('server started');
+});
+
+const io = require('socket.io')(server, {
+  pingTimeout: 50000,
+  cors: {
+    origin: 'http://localhost:3000',
+  },
+});
+
+io.on('connection', (socket) => {
+  console.log('Connected to socket.io');
+
+  socket.on('join chat', (chatID) => {
+    socket.join(chatID);
+    console.log('User Joined Room: ' + chatID);
+  });
+
+  socket.on('new message', (newMessageReceived) => {
+    const { sender, chat, content } = newMessageReceived;
+
+    if (!chat || !chat._id) {
+      console.log('Chat information missing or invalid');
+      return;
+    }
+    socket.to(chat._id).emit('message received', {
+      sender,
+      content,
+      chat,
+    });
+  });
+
+  socket.on('disconnect', () => {
+    console.log('USER DISCONNECTED');
+  });
 });
